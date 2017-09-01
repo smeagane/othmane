@@ -14,8 +14,6 @@ import statsmodels.api as sm
 import sklearn
 
 
-
-
 def get(tickers, startdate, enddate):
     def get_data(ticker):
         return (pdr.get_data_yahoo(ticker, start=startdate, end=enddate))
@@ -34,7 +32,6 @@ all_adj_close = all_data[['Adj Close']]
 # Calculate the returns 
 all_returns =daily_close_px.apply(lambda x :np.log(x / x.shift(1) ) ).dropna()
 X = sm.add_constant(all_returns['AAPL'])
-model = sm.OLS(all_returns['MSFT'],X).fit()
 # Print the summary
 #print(model.summary())
 model.fittedvalues
@@ -48,26 +45,15 @@ for i in xrange(0,len(all_returns.index)):
         epsilon=y-model.fittedvalues
         X_k.append(np.sum(epsilon))
 
+X=pd.DataFrame(index=range(len(X_k)))
 
+X['Xt']=X_k
+X['X(t-1)']=np.append(np.nan,X_k[0:-1])
+X=X.dropna()
+X.head(5)
+y1=X['Xt']
 
+X1=sm.add_constant(X['X(t-1)'])
+model_residuals = sm.OLS(y1,X1).fit()
+model_residuals.summary()
 
-len(all_returns['AAPL'].iloc[0:60])
-
-def rolling_stats(df, window=5):
-    #     dataframe to hold the results
-    res = pd.DataFrame(index=df.index)
-
-    for i in xrange(0,len(df.index)):
-
-        if len(df) - i >= window:
-            # break the df into smaller chunks
-            chunk = df.iloc[i:window+i,:]
-            # calc_stats is a function created from the code above,
-            # refer to the Gist at the end of the article.
-            beta,alpha,r2 = calc_stats(chunk)
-            res.set_value(chunk.tail(1).index[0],"beta",beta)
-            res.set_value(chunk.tail(1).index[0],"alpha",alpha)
-            res.set_value(chunk.tail(1).index[0],"r2",r2)
-            # print "%s beta: %.4f \t alpha: %.4f" % (chunk.tail(1).index[0],b,a)
-    res = res.dropna()
-    return res
